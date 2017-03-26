@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from geometry_msgs.msg import Twist
+from cosrap.msg import dimensions as dim
 from math import pi as PI
 
 
@@ -8,14 +9,17 @@ class Command:
 	vel_msg = Twist()
 	pub = None
 	dimensions = list()
+	len_bred = list()
 	def __init__(self):
-		self.dimensions = self.init_dim()
 		self.vel_msg.linear.y = 0
 		self.vel_msg.linear.z = 0
 		self.vel_msg.angular.x = 0
 		self.vel_msg.angular.y = 0
 		rospy.init_node('vel_ang')
 		self.pub = rospy.Publisher('turtle1/cmd_vel',Twist, queue_size = 10)
+		rospy.Subscriber("dim_math", dim, self.callback)
+		rospy.wait_for_message("dim_math",dim)
+		self.dimensions = self.init_dim()
 #		rospy.loginfo('initialized')
 	def main(self):
 
@@ -62,22 +66,25 @@ class Command:
 			self.pub.publish(self.vel_msg)
 	def init_dim(self):
 		# input field dimensions from image processing node
-		len_bred = [30,60,15,40,15]
-		len_bred = [dim*10/60 for dim in len_bred]
-
+		self.len_bred = [dimension*10/60 for dimension in self.len_bred]
+		print self.len_bred
 		dimensions = list()
-		dimensions.append([len_bred[2],0,1])
+		dimensions.append([self.len_bred[1],0,1])
 		dimensions.append([0,-90,0])
-		dimensions.append([len_bred[0],0,1])
+		dimensions.append([self.len_bred[0],0,1])
 		dimensions.append([0,-90,0])
-		dimensions.append([len_bred[2],0,1])
+		dimensions.append([self.len_bred[1],0,1])
 		dimensions.append([0,-90,0])
-		dimensions.append([len_bred[0],0,1])
+		dimensions.append([self.len_bred[0],0,1])
 		dimensions.append([0,-90,0])
-		dimensions.append([len_bred[2],0,0])
-		dimensions.append([len_bred[3]-len_bred[2],0,1])
+		dimensions.append([self.len_bred[1],0,0])
+		dimensions.append([self.len_bred[2]-self.len_bred[1],0,1])
 
 		return dimensions
+	def callback(self,data):
+		dimen = data.dim
+		self.len_bred = [int(item) for item in dimen.split()]
+		print self.len_bred
 
 if __name__ =='__main__':
 	try: 

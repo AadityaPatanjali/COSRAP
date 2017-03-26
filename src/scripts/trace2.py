@@ -82,12 +82,12 @@ class Command:
 		dimensions.append([0,-90,0])
 		dimensions.append([self.len_bred[0],0,1])
 		dimensions.append([0,-90,0])
-		dimensions.append([self.len_bred[1],0,1])
+		dimensions.append([self.len_bred[3],0,1])
 		dimensions.append([0,-90,0])
 		dimensions.append([self.len_bred[0],0,1])
 		dimensions.append([0,-90,0])
 		dimensions.append([self.len_bred[1],0,0])
-		dimensions.append([self.len_bred[2]-self.len_bred[1],0,1])
+		dimensions.append([self.len_bred[2],0,1])
 
 		return dimensions
 	def callback(self,data):

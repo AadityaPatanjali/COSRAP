@@ -3,6 +3,8 @@ import rospy
 from geometry_msgs.msg import Twist
 from cosrap.msg import dimensions as dim
 from math import pi as PI
+import turtlesim.srv
+import tf
 
 
 class Command:
@@ -17,6 +19,13 @@ class Command:
 		self.vel_msg.angular.y = 0
 		rospy.init_node('vel_ang')
 		self.pub = rospy.Publisher('turtle1/cmd_vel',Twist, queue_size = 10)
+		listener = tf.TransformListener()
+		setter = rospy.ServiceProxy('turtle1/set_pen',turtlesim.srv.SetPen)
+		setter(69,86,255,3.14,0)
+		teleporter = rospy.ServiceProxy('turtle1/teleport_absolute', turtlesim.srv.TeleportAbsolute)
+		teleporter(3,1,1.57079632679)
+		setter = rospy.ServiceProxy('turtle1/set_pen',turtlesim.srv.SetPen)
+		setter(255,255,255,3.14,0)
 		rospy.Subscriber("dim_math", dim, self.callback)
 		rospy.wait_for_message("dim_math",dim)
 		self.dimensions = self.init_dim()
@@ -73,12 +82,12 @@ class Command:
 		dimensions.append([0,-90,0])
 		dimensions.append([self.len_bred[0],0,1])
 		dimensions.append([0,-90,0])
-		dimensions.append([self.len_bred[1],0,1])
+		dimensions.append([self.len_bred[3],0,1])
 		dimensions.append([0,-90,0])
 		dimensions.append([self.len_bred[0],0,1])
 		dimensions.append([0,-90,0])
 		dimensions.append([self.len_bred[1],0,0])
-		dimensions.append([self.len_bred[2]-self.len_bred[1],0,1])
+		dimensions.append([self.len_bred[2],0,1])
 
 		return dimensions
 	def callback(self,data):

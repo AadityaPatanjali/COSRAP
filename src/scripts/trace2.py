@@ -19,13 +19,11 @@ class Command:
 		self.vel_msg.angular.y = 0
 		rospy.init_node('vel_ang2')
 		listener = tf.TransformListener()
-		rospy.wait_for_service('spawn')
 		spawner = rospy.ServiceProxy('spawn', turtlesim.srv.Spawn)
 		spawner(8, 8.5, 4.712388980384, 'turtle2')
 
-		rospy.wait_for_service('set_pen')
-		setter = rospy.ServiceProxy('set_pen',turtlesim.srv.SetPen)
-		setter(255,255,255,3.14,'off','turtle2')
+		setter = rospy.ServiceProxy('turtle2/set_pen',turtlesim.srv.SetPen)
+		setter(255,255,255,3.14,0)
 
 		self.pub = rospy.Publisher('turtle2/cmd_vel',Twist, queue_size = 10)
 		rospy.Subscriber("dim_math", dim, self.callback)

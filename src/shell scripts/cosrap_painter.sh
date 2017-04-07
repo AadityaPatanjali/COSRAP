@@ -9,8 +9,8 @@ sleep 1
 rosservice call turtle1/teleport_absolute 3 1 1.57079632679
 sleep 1
 rosservice call turtle1/set_pen 255 255 255 3.14 off
-gnome-terminal -x sh -c "python ~/catkin_ws/src/cosrap/src/scripts/trace.py; bash"
-gnome-terminal -x sh -c "python ~/catkin_ws/src/cosrap/src/scripts/trace2.py; bash"
+gnome-terminal -x sh -c "python ~/catkin_ws/src/cosrap/src/scripts/bot_one.py; bash"
+gnome-terminal -x sh -c "python ~/catkin_ws/src/cosrap/src/scripts/bot_two.py; bash"
 gnome-terminal -x sh -c "python ~/catkin_ws/src/cosrap/src/scripts/camera_capture.py; bash"
 sleep 33
 

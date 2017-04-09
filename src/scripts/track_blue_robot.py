@@ -7,12 +7,14 @@ import math as m
 
 mid_x = 0
 mid_y = 0
-mid_dx = 0
-mid_dy = 0
+dx = 0
+dy = 0
 turned_angle = 0
 accum_theta = 0
 
 def track_color(hsv,input_frame,lower,upper):
+    mid_dx = 0
+    mid_dy = 0
     mask = cv2.inRange(hsv, lower, upper)
     output = cv2.bitwise_and(hsv, hsv, mask = mask)
     image_gray = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
@@ -27,18 +29,13 @@ def track_color(hsv,input_frame,lower,upper):
                 mid_x = x+w/2
                 mid_y = y+h/2  
 
-                mid_dx = mid_dx - mid_x
-                mid_dy = mid_dy - mid_y
+                dx = mid_dx - mid_x
+                dy = mid_dy - mid_y
                         
-                x_val = str(mid_dx)
-                y_val = str(mid_dy)
-                theta = m.atan2(mid_y,mid_x)*180/m.pi
+                x_val = str(mid_x)
+                y_val = str(mid_y)
+                theta = m.atan2(dy,dx)*180/m.pi
                     
-                if mid_dx != 0 and mid_dy != 0:
-                    accum_theta = accum_theta+theta
-                else:
-                    turned_angle = accum_theta
-
                 text = x_val+','+y_val
                 # print text,',',theta,',',turned_angle 
                 cv2.putText(input_frame,text,(x-10,y-10),2,1,(0,0,255))

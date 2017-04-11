@@ -1,20 +1,20 @@
 import rospy
 from geometry_msgs.msg import Twist
-from cosrap.msg import dimensions as dim
+#from cosrap.msg import dimensions as dim
 from math import pi as PI
 import Robot
 
 
-class Command()
+class Command():
 
-	vel_msg = Twist()
-	pub = None
+#	vel_msg = Twist()
+#	pub = None
 	dimensions = list()
 	len_bred = list()
 	time = list()
 	def __init__(self):
-		rospy.Subscriber("dim_math", dim, self.callback)
-		rospy.wait_for_message("dim_math",dim)
+#		rospy.Subscriber("dim_math", dim, self.callback)
+#		rospy.wait_for_message("dim_math",dim)
 		self.dimensions = self.init_dim()
 		self.init_time()
 
@@ -40,7 +40,7 @@ class Command()
 		#  - left_id: The ID of the left motor, default is 1.
 		#  - right_id: The ID of the right motor, default is 2.
 		robot = Robot.Robot(left_trim=LEFT_TRIM, right_trim=RIGHT_TRIM)
-		teleport(robot)
+		self.teleport(robot)
 		# Now move the robot around!
 		# Each call below takes two parameters:
 		#  - speed: The speed of the movement, a value from 0-255.  The higher the value
@@ -50,20 +50,22 @@ class Command()
 		#                     this amount of seconds the robot will stop.  This parameter
 		#                     is optional and if not specified the robot will start moving
 		#                     forever.
+		rpm = 150
 		for ele in self.time:
 			if ele[1] == 0:
 				robot.forward(rpm,ele[0])
 			elif ele[1]>0:
-				robot.left(rpm,ele[1])
+				robot.left(rpm,abs(ele[1]))
 			else:
-				robot.right(rpm,ele[1])
+				robot.right(rpm,abs(ele[1]))
 		rospy.signal_shutdown('')
-		rospy.spin()
+#		rospy.spin()
 
 
 		# That's it!  Note that on exit the robot will automatically stop moving.
 	def init_dim(self):
 		# print field dimensions from image processing node
+		self.len_bred=[150,50,200,50]
 		print self.len_bred
 		dimensions = list()
 		dimensions.append([self.len_bred[1],0,1])
@@ -85,9 +87,9 @@ class Command()
 		rpm = 150.0
 		):
 
-		distance_per_revolution = 2*pi*wheel_radius
+		distance_per_revolution = 2*PI*wheel_radius
 		velocity = distance_per_revolution*rpm/60 #cm/s
-		angular_velocity = velocity*360/(2*pi*base_length) #degrees/s
+		angular_velocity = velocity*360/(2*PI*base_length) #degrees/s
 		self.time = [(dim/velocity,ang/angular_velocity,marker) for dim,ang,marker in self.dimensions]
 
 	def callback(self,data):
@@ -95,13 +97,14 @@ class Command()
 		self.len_bred = [int(item) for item in dimen.split()]
 		print self.len_bred
 
-	def teleport(robot):
+	def teleport(self,robot):
 		# Write code to move the robot to a specific location
 		# robot.forward(,)
 		# if condition:
 		# 	robot.left(,)
 		# else:
 		# 	robot.right(,)
+		print 'Teleported'
 
 if __name__ =='__main__':
 	try: 

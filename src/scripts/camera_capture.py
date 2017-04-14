@@ -5,32 +5,21 @@ import cv2
 import numpy as np
 import operator
 import rospy
-
-# from OcrDigits import Digits
-
+import sys
 from cosrap.msg import dimensions as dim
 from os.path import expanduser
+
 HOME = expanduser('~')
 FOLDER = HOME + '/catkin_ws/src/cosrap/src/scripts/'
 
-
 class Digits:
 
-	def __init__(
-		self,
-		x,
-		y,
-		h,
-		w,
-		s,
-		):
-
+	def __init__(self,x,y,h,w,s):
 		self.x_column = x
 		self.y_row = y
 		self.height = h
 		self.width = w
 		self.digit = s
-
 
 def dispatch_dimensions(digit_list):
 	pub = rospy.Publisher('dim_math', dim, queue_size=10)
@@ -64,26 +53,20 @@ def dispatch_dimensions(digit_list):
 	total_list_sort = total_list
 	total_list_sort.sort(key=operator.itemgetter('y', 'x', 'w'))
 
-	print total_list_sort
-
 	for proton in total_list_sort:
 		count = 0
 		for neutron in total_list_sort:
 			if count == 0:
 				y_val = proton['y']
 			else:
-				if y_val + leeway >= neutron['y'] and y_val - leeway \
-					<= neutron['y']:
+				if y_val + leeway >= neutron['y'] and y_val - leeway <= neutron['y']:
 					neutron['y'] = y_val
 				else:
 					continue
 			count = count + 1
 
-	print total_list_sort
-
 	total_list_sort_x = total_list_sort
 	total_list_sort_x.sort(key=operator.itemgetter('x'))
-	print total_list_sort_x
 
 	# string stitching
 
@@ -93,8 +76,7 @@ def dispatch_dimensions(digit_list):
 			if history != proton['x']:
 				if proton['y'] == neutron['y']:
 					if proton['x'] < neutron['x']:
-						if neutron['x'] <= proton['x'] + proton['w'] \
-							+ weight:
+						if neutron['x'] <= proton['x'] + proton['w'] + weight:
 							sub_list.append(proton['d'] + neutron['d'])
 							valid = True
 							history = neutron['x']
@@ -125,8 +107,8 @@ def dispatch_dimensions(digit_list):
 	while not rospy.is_shutdown():
 		pub.publish(dimensions)
 		rate.sleep()
-		if cv2.waitKey(1) == ord('q'):
-			break
+		if cv2.waitKey(1) == 27:
+			sys.exit()
 
 
 if __name__ == '__main__':
@@ -150,41 +132,28 @@ if __name__ == '__main__':
 
 		# read each frame
 
-		(ret, image) = capture.read()
+		ret, image = capture.read()
 
 		image_analysis = image
 
 		image_gray = cv2.cvtColor(image_analysis, cv2.COLOR_BGR2GRAY)
-		(ret, thresholded_image) = cv2.threshold(image_gray, 127, 255,
-				cv2.THRESH_BINARY_INV)
-		(_, contours, hierarchy) = cv2.findContours(thresholded_image,
-				cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+		ret, thresholded_image = cv2.threshold(image_gray, 127, 255,cv2.THRESH_BINARY_INV)
+		_, contours, hierarchy = cv2.findContours(thresholded_image,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 		for contour in contours:
-			if cv2.contourArea(contour) < 2000 \
-				and cv2.contourArea(contour) > 500:
+			if cv2.contourArea(contour) < 2000 and cv2.contourArea(contour) > 500:
 				area = cv2.contourArea(contour)
 				[x, y, w, h] = cv2.boundingRect(contour)
 				if h > 35 and h < 60:
 					crop_img = image_analysis[y:y + h, x:x + w]
-					cv2.rectangle(image, (x, y), (x + w, y + h), (255,
-								  0, 0), 1)
+					cv2.rectangle(image, (x, y), (x + w, y + h), (255,0, 0), 1)
 					region = thresholded_image[y:y + h, x:x + w]
 				region_crop = cv2.resize(region, (10, 10))
 				region_crop = region_crop.reshape((1, 100))
 				region_crop = np.float32(region_crop)
-				(retval, results, neigh_resp, dists) = \
-					model.findNearest(region_crop, k=2)
+				(retval, results, neigh_resp, dists) = model.findNearest(region_crop, k=2)
 				string = str(int(results[0][0]))
-
-				cv2.putText(
-					image,
-					string,
-					(x, y - 15),
-					2,
-					1,
-					(0, 0, 255),
-					)
+				cv2.putText(image,string,(x, y - 15),2,1,(0, 0, 255))
 				digit_list.append(Digits(x, y, w, h, string))
 
 		if cv2.waitKey(1) == ord('c'):
@@ -195,27 +164,16 @@ if __name__ == '__main__':
 
 		# read each frame
 
-		cv2.rectangle(image, (0, 0), (int(width_grid / 3),
-					  int(height_grid)), (255, 255, 0), 1)
-		cv2.rectangle(image, (int(2 * width_grid / 3), 0),
-					  (int(width_grid / 3), int(height_grid)), (255,
-					  255, 0), 1)
-		cv2.rectangle(image, (int(2 * width_grid / 3) + int(width_grid
-					  / 3), 0), (int(width_grid / 3),
-					  int(height_grid)), (255, 255, 0), 1)
-		cv2.rectangle(image, (0, 0), (int(width_grid), int(height_grid
-					  / 3)), (255, 255, 0), 1)
-		cv2.rectangle(image, (0, int(2 * height_grid / 3)),
-					  (int(width_grid), int(height_grid / 3)), (255,
-					  255, 0), 1)
-		cv2.rectangle(image, (0, int(2 * height_grid / 3)
-					  + int(height_grid / 3)), (int(width_grid),
-					  int(height_grid / 3)), (255, 255, 0), 1)
-		cv2.imshow('Beta test window', image)
+		cv2.rectangle(image, (0, 0), (int(width_grid / 3),int(height_grid)), (255, 255, 0), 1)
+		cv2.rectangle(image, (int(2 * width_grid / 3), 0),(int(width_grid / 3), int(height_grid)), (255,255,0), 1)
+		cv2.rectangle(image, (int(2 * width_grid / 3) + int(width_grid/ 3), 0), (int(width_grid / 3),int(height_grid)), (255, 255, 0), 1)
+		cv2.rectangle(image, (0, 0), (int(width_grid), int(height_grid/ 3)), (255, 255, 0), 1)
+		cv2.rectangle(image, (0, int(2 * height_grid / 3)),(int(width_grid), int(height_grid / 3)), (255,255, 0), 1)
+		cv2.rectangle(image, (0, int(2 * height_grid / 3) + int(height_grid / 3)), (int(width_grid),int(height_grid / 3)), (255, 255, 0), 1)
+		cv2.imshow('User input Window', image)
 
-		if cv2.waitKey(1) == ord('q'):
-			break
+		if cv2.waitKey(1) == 27:
+			sys.exit()
 
-elif __name__ == '__exit__':
 	capture.release()
 	cv2.destroyAllWindows()

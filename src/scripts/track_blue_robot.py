@@ -1,20 +1,18 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 
 import cv2
 import sys
+import rospy
 import numpy as np 
-import math as m
-
-mid_x = 0
-mid_y = 0
-dx = 0
-dy = 0
-turned_angle = 0
-accum_theta = 0
+from std_msgs.msg import String
+from math import *
 
 def track_color(hsv,input_frame,lower,upper):
-    mid_dx = 0
-    mid_dy = 0
+    x1, x2, x3, y1, y2, y3=0,0,0,0,0,0
+    dx,dy = 0,0
+    cart_x = []
+    cart_y = []
+    text = ''
     mask = cv2.inRange(hsv, lower, upper)
     output = cv2.bitwise_and(hsv, hsv, mask = mask)
     image_gray = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
@@ -25,29 +23,58 @@ def track_color(hsv,input_frame,lower,upper):
         [x,y,w,h] = cv2.boundingRect(contour)
         if cv2.contourArea(contour) >70:
             if h>10:
-                cv2.rectangle(input_frame,(x,y),(x+w,y+h),(255,0,0),1)
-                mid_x = x+w/2
-                mid_y = y+h/2  
+                rectangle = cv2.minAreaRect(contour)
+                enclose = cv2.boxPoints(rectangle)
+                enclose = np.int0(enclose)
+                for i in enclose:
+                    count = 0
+                    for j in i:
+                        count = count%2
+                        if count == 0:
+                            cart_x.append(j)
+                        else:
+                            cart_y.append(j)
+                        count = count+1
+                
+                i = 0
 
-                dx = mid_dx - mid_x
-                dy = mid_dy - mid_y
-                        
-                x_val = str(mid_x)
-                y_val = str(mid_y)
-                theta = m.atan2(dy,dx)*180/m.pi
+                while i<len(cart_x):
+                    if i == 1:
+                        x1 = cart_x[i]
+                        y1 = cart_y[i]
+                            
+                    elif i == 2:
+                        x2 = cart_x[i]
+                        y2 = cart_y[i]
                     
-                text = x_val+','+y_val
-                # print text,',',theta,',',turned_angle 
-                cv2.putText(input_frame,text,(x-10,y-10),2,1,(0,0,255))
+                    elif i == 3:
+                        x3 = cart_x[i]
+                        y3 = cart_y[i]
+                    
+                    i = i+1
 
-                mid_dx = mid_x
-                mid_dy = mid_y
+                d1 = sqrt((x2-x1)**2+(y2-y1)**2)
+                d2 = sqrt((x3-x2)**2+(y3-y2)**2)
+                
+                if d1 > d2:
+                    angle = 90 - atan2((y1-y2),(x2-x1))*180/pi
+                else:
+                    angle = -(90 - atan2((y3-y2),(x3-x2))*180/pi)
 
-    return input_frame
+                text = str(int(angle))
+
+                cv2.putText(input_frame,text,(10,40),1,1,(0,255,0))
+
+                cv2.drawContours(input_frame,[enclose],0,(0,0,255),2)
+                    
+    return input_frame, text
 
 if __name__ == '__main__':
     
     capture = cv2.VideoCapture(0)
+    pub = rospy.Publisher('feedback', String, queue_size=10)
+    rospy.init_node('robot_position', anonymous=True)
+    rate = rospy.Rate(10)
 
     while True:
         
@@ -58,14 +85,29 @@ if __name__ == '__main__':
         lower_blue = np.array([90,50,50])
         upper_blue = np.array([130,255,255])
 
-        blue_output = track_color(hsv,frame,lower_blue,upper_blue)      
+        blue_output, blue_robot_angle = track_color(hsv,frame,lower_blue,upper_blue)
 
-        cv2.imshow('Alpha test - Blue robot', blue_output)
+        lower_green = np.array([30,50,120])
+        upper_green = np.array([90,255,255])
+
+        green_output, green_robot_angle = track_color(hsv,frame,lower_green,upper_green)            
         
+        cv2.imshow('Alpha test - Green robot', green_output)
+        cv2.imshow('Alpha test - Blue robot', blue_output)
+
+        angles = blue_robot_angle + '\n' + green_robot_angle
+
+        if rospy.is_shutdown():
+            pub.publish(angles)
+            rate.sleep()
+            if cv2.waitKey(1) == 27:
+                break
+
         key = cv2.waitKey(1)
 
         if key == 27:
             sys.exit()
     
+    capture.release()
     cv2.destroyAllWindows()
         

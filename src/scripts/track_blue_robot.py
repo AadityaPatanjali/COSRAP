@@ -57,21 +57,19 @@ def track_color(hsv,input_frame,lower,upper):
                 d2 = sqrt((x3-x2)**2+(y3-y2)**2)
                 
                 if d1 > d2:
-                    angle = 90 - atan2((y1-y2),(x2-x1))*180/pi
+                    angle = atan2((y1-y2),(x2-x1))*180/pi
                 else:
-                    angle = -(90 - atan2((y3-y2),(x3-x2))*180/pi)
+                    angle = atan2((y3-y2),(x3-x2))*180/pi
 
                 text = str(int(angle))
 
-                cv2.putText(input_frame,text,(10,40),1,1,(0,255,0))
-
                 cv2.drawContours(input_frame,[enclose],0,(0,0,255),2)
                     
-    return input_frame, text
+    return input_frame,output, text
 
 if __name__ == '__main__':
     
-    capture = cv2.VideoCapture(0)
+    capture = cv2.VideoCapture(1)
     pub = rospy.Publisher('feedback', String, queue_size=10)
     rospy.init_node('robot_position', anonymous=True)
     rate = rospy.Rate(10)
@@ -80,19 +78,28 @@ if __name__ == '__main__':
         
         _, frame = capture.read()
 
+        frame_blue = frame
+        frame_green = frame
+
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
+        #Green thresholding
         lower_blue = np.array([90,50,50])
         upper_blue = np.array([130,255,255])
-
-        blue_output, blue_robot_angle = track_color(hsv,frame,lower_blue,upper_blue)
+        blue_input=hsv
+       
+        blue_output, mask_b_output, blue_robot_angle = track_color(blue_input,frame_blue,lower_blue,upper_blue)
+        #Green thresholding
 
         lower_green = np.array([30,50,120])
         upper_green = np.array([90,255,255])
+        green_input=hsv
 
-        green_output, green_robot_angle = track_color(hsv,frame,lower_green,upper_green)            
+        green_output,mask_g_output, green_robot_angle = track_color(green_input,frame_green,lower_green,upper_green)          
         
+        cv2.putText(green_output,str(green_robot_angle),(10,40),1,1,(0,255,0))
         cv2.imshow('Alpha test - Green robot', green_output)
+        cv2.putText(blue_output,str(blue_robot_angle),(10,40),1,1,(0,255,0))
         cv2.imshow('Alpha test - Blue robot', blue_output)
 
         angles = blue_robot_angle + '\n' + green_robot_angle

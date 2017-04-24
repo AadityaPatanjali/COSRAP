@@ -4,15 +4,11 @@ import cv2
 import sys
 import rospy
 import numpy as np 
-from std_msgs.msg import String
+from cosrap.msg import robot_parameters
 from math import *
 
 def track_color(hsv,input_frame,lower,upper):
-    x1, x2, x3, y1, y2, y3=0,0,0,0,0,0
-    dx,dy = 0,0
-    cart_x = []
-    cart_y = []
-    text = ''
+    angle, mid_x, mid_y  = 0,0,0
     mask = cv2.inRange(hsv, lower, upper)
     output = cv2.bitwise_and(hsv, hsv, mask = mask)
     image_gray = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
@@ -21,58 +17,43 @@ def track_color(hsv,input_frame,lower,upper):
 
     for contour in contours:
         [x,y,w,h] = cv2.boundingRect(contour)
-        if cv2.contourArea(contour) >70:
-            if h>10:
+        if cv2.contourArea(contour) >200:
+            if h>30:
                 rectangle = cv2.minAreaRect(contour)
                 enclose = cv2.boxPoints(rectangle)
                 enclose = np.int0(enclose)
-                for i in enclose:
-                    count = 0
-                    for j in i:
-                        count = count%2
-                        if count == 0:
-                            cart_x.append(j)
-                        else:
-                            cart_y.append(j)
-                        count = count+1
-                
-                i = 0
 
-                while i<len(cart_x):
-                    if i == 1:
-                        x1 = cart_x[i]
-                        y1 = cart_y[i]
-                            
-                    elif i == 2:
-                        x2 = cart_x[i]
-                        y2 = cart_y[i]
-                    
-                    elif i == 3:
-                        x3 = cart_x[i]
-                        y3 = cart_y[i]
-                    
-                    i = i+1
+                coordinates = np.array(enclose)
+                (x1,x2,x3) = (coordinates[1:4,0])
+                (y1,y2,y3) = (coordinates[1:4,1])
 
                 d1 = sqrt((x2-x1)**2+(y2-y1)**2)
                 d2 = sqrt((x3-x2)**2+(y3-y2)**2)
                 
                 if d1 > d2:
-                    angle = atan2((y1-y2),(x2-x1))*180/pi
+                    angle = 180 - atan2((y2-y1),(x2-x1))*180/pi
                 else:
                     angle = atan2((y3-y2),(x3-x2))*180/pi
 
-                text = str(int(angle))
+                if angle > 90 and angle < 270:
+                    angle = 180 - angle
+                    if angle < 0:
+                        angle = -angle
+
+                mid_x = (x3+x1)/2
+                mid_y = (y3+y1)/2
 
                 cv2.drawContours(input_frame,[enclose],0,(0,0,255),2)
                     
-    return input_frame,output, text
+    return input_frame, output, angle, mid_x, mid_y
 
 if __name__ == '__main__':
     
-    capture = cv2.VideoCapture(1)
-    pub = rospy.Publisher('feedback', String, queue_size=10)
+    capture = cv2.VideoCapture(0)
+    pub = rospy.Publisher("feedback", robot_parameters, queue_size=10)
     rospy.init_node('robot_position', anonymous=True)
     rate = rospy.Rate(10)
+    params = robot_parameters()
 
     while True:
         
@@ -88,24 +69,31 @@ if __name__ == '__main__':
         upper_blue = np.array([130,255,255])
         blue_input=hsv
        
-        blue_output, mask_b_output, blue_robot_angle = track_color(blue_input,frame_blue,lower_blue,upper_blue)
+        blue_output, mask_b_output, blue_robot_angle, blue_mid_x, blue_mid_y = track_color(blue_input,frame_blue,lower_blue,upper_blue)
         #Green thresholding
 
         lower_green = np.array([30,50,120])
         upper_green = np.array([90,255,255])
         green_input=hsv
 
-        green_output,mask_g_output, green_robot_angle = track_color(green_input,frame_green,lower_green,upper_green)          
+        green_output,mask_g_output, green_robot_angle, green_mid_x, green_mid_y = track_color(green_input,frame_green,lower_green,upper_green)          
         
         cv2.putText(green_output,str(green_robot_angle),(10,40),1,1,(0,255,0))
         cv2.imshow('Alpha test - Green robot', green_output)
         cv2.putText(blue_output,str(blue_robot_angle),(10,40),1,1,(0,255,0))
         cv2.imshow('Alpha test - Blue robot', blue_output)
 
-        angles = blue_robot_angle + '\n' + green_robot_angle
+        # print str(blue_robot_angle) + ',' + str(green_robot_angle)   
 
-        if rospy.is_shutdown():
-            pub.publish(angles)
+        params.blue_angle = blue_robot_angle
+        params.green_angle = green_robot_angle
+        params.blue_x = blue_mid_x
+        params.blue_y = blue_mid_y
+        params.green_x = green_mid_x
+        params.green_y = green_mid_y
+
+        if not rospy.is_shutdown():
+            pub.publish(params)
             rate.sleep()
             if cv2.waitKey(1) == 27:
                 break

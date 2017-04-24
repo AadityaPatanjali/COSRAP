@@ -6,7 +6,7 @@ import numpy as np
 import operator
 import rospy
 import sys
-from cosrap.msg import dimensions as dim
+from cosrap.msg import dimensions
 from os.path import expanduser
 
 HOME = expanduser('~')
@@ -22,18 +22,18 @@ class Digits:
 		self.digit = s
 
 def dispatch_dimensions(digit_list):
-	pub = rospy.Publisher('dim_math', dim, queue_size=10)
+	pub = rospy.Publisher("dim_math", dimensions, queue_size=10)
 	rospy.init_node('camera_capture', anonymous=True)
 	rate = rospy.Rate(10)
-	dimensions = ''
+	dim = dimensions()
 	digit_dict = {}
 	total_list = []
 	sub_list = []
 	y_val = 0
 	sorted_flag = False
 	history = 0
-	length = 0
-	width = 0
+	length = ''
+	width = ''
 	valid = False
 	weight = 6
 	leeway = 7
@@ -95,17 +95,18 @@ def dispatch_dimensions(digit_list):
 	count = 0
 	for string in sub_list:
 		if count == 0:
-			width = int(string)
+			width = string
 		else:
-			length = length + int(string)
+			length = length + '\n' + string
 		count = count + 1
-		dimensions = dimensions + '\n' + string
+		# dimensions = dimensions + '\n' + string
 
-	print 'Length: ', length, '\n Width: ', width
-	print '\n', dimensions
+	print length,width
+	dim.length = length
+	dim.width = width
 
 	while not rospy.is_shutdown():
-		pub.publish(dimensions)
+		pub.publish(dim)
 		rate.sleep()
 		if cv2.waitKey(1) == 27:
 			sys.exit()
@@ -156,7 +157,7 @@ if __name__ == '__main__':
 				cv2.putText(image,string,(x, y - 15),2,1,(0, 0, 255))
 				digit_list.append(Digits(x, y, w, h, string))
 
-		if cv2.waitKey(1) == ord('c'):
+		if cv2.waitKey(1) == 13:
 			dispatch_dimensions(digit_list)
 		else:
 

@@ -1,1 +1,2 @@
-string dim
+string length
+string width

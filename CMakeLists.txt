@@ -51,6 +51,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   dimensions.msg
+  robot_parameters.msg
 #   Message2.msg
  )
 

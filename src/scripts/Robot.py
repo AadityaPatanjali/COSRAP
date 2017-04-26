@@ -8,10 +8,18 @@
 import time
 import atexit
 
+from RPi import GPIO
+from time import sleep
+
 from Adafruit_MotorHAT import Adafruit_MotorHAT
+M1_counter = 0
+M2_counter = 0
+
+M2_channel_ALastState = 0
 
 
 class Robot(object):
+    
     def __init__(self, addr=0x60, left_id=1, right_id=2, left_trim=0, right_trim=0,
                  stop_at_exit=True):
         """Create an instance of the robot.  Can specify the following optional
@@ -120,3 +128,112 @@ class Robot(object):
         if seconds is not None:
             time.sleep(seconds)
             self.stop()
+
+    def left_motor(self, speed,seconds=None):
+        #print " left motor comanded" , speed
+        """Spin to the left motor at the specified speed.  Will start spinning and
+        return unless a seconds value is specified, in which case the robot will
+        spin for that amount of time and then stop.
+        """
+        # Set motor speed.
+        motorVolt=0
+        if (speed > 255):
+            speed=255
+        if (speed < -255):
+            speed=-255
+        if (speed >= 0):
+            motorVolt=abs(speed)
+            self._left.run(Adafruit_MotorHAT.FORWARD)
+        if (speed < 0):
+            motorVolt=abs(speed)
+            self._left.run(Adafruit_MotorHAT.BACKWARD)
+        
+        self._left_speed(abs(motorVolt))
+        
+        # If an amount of time is specified, move for that time and then stop.
+        if seconds is not None:
+            time.sleep(seconds)
+            self.stop()
+
+    def right_motor(self, speed,seconds=None):
+        #print " right motor comanded",speed 
+        """Spin to the left motor at the specified speed.  Will start spinning and
+        return unless a seconds value is specified, in which case the robot will
+        spin for that amount of time and then stop.
+        """
+        # Set motor speed.
+        motorVolt=0
+        if (speed > 255):
+            speed=255
+        if (speed < -255):
+            speed=-255
+        if (speed >= 0):
+            motorVolt=abs(speed)
+            self._right.run(Adafruit_MotorHAT.FORWARD)
+        if (speed < 0):
+            motorVolt=abs(speed)
+            self._right.run(Adafruit_MotorHAT.BACKWARD)
+        
+        self._right_speed(abs(motorVolt))
+        
+        # If an amount of time is specified, move for that time and then stop.
+        if seconds is not None:
+            time.sleep(seconds)
+            self.stop()
+
+    def right_encoder(self, M1_channel_A,M1_channel_B):
+        print "right enco_Loop,", M1_channel_A,",",M1_channel_B,
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(M1_channel_A, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(M1_channel_B, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        global M1_counter
+        M1_channel_ALastState = GPIO.input(M1_channel_A)
+
+        try:
+
+                while True:
+                        M1_channel_AState = GPIO.input(M1_channel_A)
+                        M1_channel_BState = GPIO.input(M1_channel_B)
+                        if M1_channel_AState != M1_channel_ALastState:
+                            if M1_channel_BState != M1_channel_AState:
+                                    M1_counter += 1
+                            else:
+                                    M1_counter -= 1
+                            print "right Encoder count ",M1_counter,
+                        M1_channel_ALastState = M1_channel_AState
+                        sleep(0.001)
+                        return M1_counter
+
+        finally:
+                GPIO.cleanup()
+
+    def left_encoder(self, M2_channel_A,M2_channel_B):
+        #print "left enco_Loop,", M2_channel_A,",",M2_channel_B
+        global M2_counter
+        global M2_channel_ALastState
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(M2_channel_A, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(M2_channel_B, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        
+
+        try:
+
+                M2_channel_AState = GPIO.input(M2_channel_A)
+                M2_channel_BState = GPIO.input(M2_channel_B)
+                #print M2_channel_AState,",",M2_channel_ALastState
+                if M2_channel_AState != M2_channel_ALastState:
+                    #print "left Encoder count ",M1_counter
+                    if M2_channel_BState != M2_channel_AState:
+                            M2_counter += 1
+                    else:
+                            M2_counter -= 1
+                    print "left Encoder count ",M2_counter
+                M2_channel_ALastState = M2_channel_AState
+                return M2_counter
+                
+
+        finally:
+                GPIO.cleanup()
+
+
+
